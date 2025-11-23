@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo } from 'react';
 import { StaffMember, Project, Role, StaffingForecast, StaffAssignment } from '../types';
-import { ChevronLeft, ChevronRight, Search, Filter, Wand2, Calendar, GripVertical, X, CheckSquare, Star, AlertCircle, GraduationCap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Filter, Wand2, Calendar, User, GripVertical, X, CheckSquare, Star, GraduationCap, AlertCircle } from 'lucide-react';
 import { sortStaffByProximity } from '../services/aiService';
 
 interface RotaPlannerProps {
@@ -64,11 +65,13 @@ export const RotaPlanner: React.FC<RotaPlannerProps> = ({
 
   // Derive unique filter options from staff list
   const uniqueQuals = useMemo(() => Array.from(new Set(staff.map(s => s.qualifications).filter(Boolean))).sort(), [staff]);
+  
   const uniqueSkills = useMemo(() => {
       const skills = new Set<string>();
       staff.forEach(s => s.abilities?.forEach(a => skills.add(a)));
       return Array.from(skills).sort();
   }, [staff]);
+
   const uniqueTraining = useMemo(() => {
       const training = new Set<string>();
       staff.forEach(s => s.training?.forEach(t => training.add(t)));
@@ -192,7 +195,7 @@ export const RotaPlanner: React.FC<RotaPlannerProps> = ({
         <div className="w-80 flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden shrink-0">
             <div className="p-4 border-b border-gray-100 bg-gray-50">
                 <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <Filter className="w-4 h-4 text-[#00B5D8]" />
+                    <User className="w-4 h-4 text-[#00B5D8]" />
                     Staff Pool
                 </h3>
                 

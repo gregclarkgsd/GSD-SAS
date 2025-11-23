@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MOCK_PROJECTS, MOCK_ROLES, MOCK_STAFF, MOCK_STAFFING_FORECAST, MOCK_STAFF_ASSIGNMENTS } from '../services/mockData';
 import { Project, Role, StaffMember, StaffingForecast, ProjectStage, StaffAssignment } from '../types';
 import { FORMAT_CURRENCY, STAGE_ORDER } from '../constants';
@@ -8,7 +8,7 @@ import { StaffModal } from '../components/StaffModal';
 import { RoleModal } from '../components/RoleModal';
 import { StaffImportModal } from '../components/StaffImportModal';
 import { RotaPlanner } from '../components/RotaPlanner';
-import { Users, ChevronLeft, ChevronRight, Calendar, Plus, UserPlus, Trash2, Briefcase, Settings2, Search, Filter as FilterIcon, Star, Upload, Download, X, Info, Edit2, LayoutGrid } from 'lucide-react';
+import { Users, ChevronLeft, ChevronRight, Calendar, Plus, UserPlus, Trash2, Briefcase, Settings2, Search, Filter as FilterIcon, Star, Upload, Download, X, Info, Edit2, LayoutGrid, Check } from 'lucide-react';
 
 // Helper to calculate ISO week number
 const getWeekNumber = (d: Date) => {
@@ -33,6 +33,10 @@ export const Staffing: React.FC = () => {
   const [forecasts, setForecasts] = useState<StaffingForecast[]>(MOCK_STAFFING_FORECAST);
   const [assignments, setAssignments] = useState<StaffAssignment[]>(MOCK_STAFF_ASSIGNMENTS);
 
+  // Per-Project Role Visibility State
+  const [projectRoles, setProjectRoles] = useState<Record<string, string[]>>({});
+  const [roleSelectorOpen, setRoleSelectorOpen] = useState<string | null>(null);
+
   // Modal States
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -48,6 +52,37 @@ export const Staffing: React.FC = () => {
   const [qualFilter, setQualFilter] = useState('All Cards');
   const [skillFilter, setSkillFilter] = useState('All Skills');
   const [projectStageFilter, setProjectStageFilter] = useState('All Active');
+
+  // Initialize Default Roles per Project
+  useEffect(() => {
+      if (roles.length > 0 && MOCK_PROJECTS.length > 0 && Object.keys(projectRoles).length === 0) {
+           const defaults: Record<string, string[]> = {};
+           // Match defaults: Supervisor, Painter, Sprayer (fallback to first few if not found)
+           const defaultIds = roles.filter(r => {
+               const n = r.name.toLowerCase();
+               return n.includes('supervisor') || n.includes('painter') || n.includes('sprayer');
+           }).map(r => r.id);
+           
+           // Fallback if specific named roles aren't in the mock data, just pick the first 3
+           const initialIds = defaultIds.length > 0 ? defaultIds : roles.slice(0, 3).map(r => r.id);
+
+           MOCK_PROJECTS.forEach(p => {
+               defaults[p.id] = initialIds;
+           });
+           setProjectRoles(defaults);
+      }
+  }, [roles]);
+
+  const toggleProjectRole = (projectId: string, roleId: string) => {
+      setProjectRoles(prev => {
+          const current = prev[projectId] || [];
+          if (current.includes(roleId)) {
+              return { ...prev, [projectId]: current.filter(id => id !== roleId) };
+          } else {
+              return { ...prev, [projectId]: [...current, roleId] };
+          }
+      });
+  };
 
   // --- Helper Functions ---
   const getMonday = (d: Date) => {
@@ -379,21 +414,76 @@ export const Staffing: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {activeProjects.map(project => (
+                        {activeProjects.map(project => {
+                            // Filter roles for this project based on visibility state
+                            const visibleRoleIds = projectRoles[project.id] || [];
+                            const visibleRoles = roles.filter(r => visibleRoleIds.includes(r.id));
+
+                            return (
                             <React.Fragment key={project.id}>
                                 <tr className="bg-gray-50/80 border-b border-gray-200">
                                     <td className="p-0 sticky left-0 bg-gray-100 border-r border-gray-200 z-10">
-                                        <div 
-                                            className="p-3 pl-4 flex items-center justify-between w-full h-full cursor-pointer hover:text-[#00B5D8] transition-colors group"
-                                            onClick={() => setSelectedProject(project)}
-                                        >
-                                            <span className="font-bold text-gray-900 group-hover:text-[#00B5D8]">{project.name}</span>
-                                            <Info className="w-3.5 h-3.5 text-gray-300 group-hover:text-[#00B5D8]" />
+                                        <div className="p-3 pl-4 flex items-center justify-between w-full h-full group relative">
+                                            <div 
+                                                className="cursor-pointer hover:text-[#00B5D8] transition-colors font-bold text-gray-900 flex-1 flex items-center gap-2"
+                                                onClick={() => setSelectedProject(project)}
+                                            >
+                                                {project.name}
+                                                <Info className="w-3 h-3 text-gray-300 group-hover:text-[#00B5D8]" />
+                                            </div>
+                                            
+                                            {/* Role Selector Button */}
+                                            <div className="relative">
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setRoleSelectorOpen(roleSelectorOpen === project.id ? null : project.id);
+                                                    }}
+                                                    className={`p-1.5 rounded hover:bg-gray-200 transition-colors ${roleSelectorOpen === project.id ? 'text-[#00B5D8] bg-blue-50' : 'text-gray-400'}`}
+                                                    title="Manage Project Roles"
+                                                >
+                                                    <Settings2 className="w-3.5 h-3.5" />
+                                                </button>
+
+                                                {/* Dropdown */}
+                                                {roleSelectorOpen === project.id && (
+                                                    <>
+                                                        <div 
+                                                            className="fixed inset-0 z-30" 
+                                                            onClick={() => setRoleSelectorOpen(null)}
+                                                        />
+                                                        <div className="absolute left-0 top-full mt-2 z-40 bg-white border border-gray-200 rounded-xl shadow-xl w-56 p-2 flex flex-col gap-1 animate-in fade-in zoom-in duration-200">
+                                                            <div className="text-[10px] font-bold text-gray-400 px-2 py-1 uppercase tracking-wider border-b border-gray-100 mb-1">Visible Roles</div>
+                                                            {roles.map(r => {
+                                                                const isSelected = visibleRoleIds.includes(r.id);
+                                                                return (
+                                                                    <div 
+                                                                        key={r.id}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            toggleProjectRole(project.id, r.id);
+                                                                        }}
+                                                                        className={`
+                                                                            flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors
+                                                                            ${isSelected ? 'bg-blue-50 text-blue-700 font-medium' : 'hover:bg-gray-50 text-gray-600'}
+                                                                        `}
+                                                                    >
+                                                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#00B5D8] border-[#00B5D8] text-white' : 'border-gray-300 bg-white'}`}>
+                                                                            {isSelected && <Check className="w-3 h-3" />}
+                                                                        </div>
+                                                                        <span>{r.name}</span>
+                                                                    </div>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     </td>
                                     {periods.map(p => <td key={p.key} className="bg-gray-50/50 border-r border-gray-200"></td>)}
                                 </tr>
-                                {roles.map(role => {
+                                {visibleRoles.map(role => {
                                     return (
                                         <tr key={`${project.id}-${role.id}`} className="hover:bg-blue-50/30 transition-colors border-b border-gray-100 group">
                                             <td className="p-2 pl-8 sticky left-0 bg-white group-hover:bg-blue-50/30 border-r border-gray-200 flex items-center justify-between z-10">
@@ -418,7 +508,7 @@ export const Staffing: React.FC = () => {
                                     );
                                 })}
                             </React.Fragment>
-                        ))}
+                        )})}
                         {/* Footer Costs */}
                         <tr className="bg-[#1A2040] text-white sticky bottom-0 z-20 font-bold shadow-lg">
                             <td className="p-4 sticky left-0 bg-[#1A2040] border-r border-gray-700 border-t border-[#00B5D8]/50">Total Estimated Cost</td>

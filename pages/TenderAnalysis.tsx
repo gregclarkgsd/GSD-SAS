@@ -5,7 +5,7 @@ import { Project, TenderDoc, ChatMessage, CribSheet } from '../types';
 import { classifyTenderDocument, generateCribSheet, queryTenderAgent } from '../services/aiService';
 import { 
   BrainCircuit, Upload, FileText, Search, Send, Paperclip, Globe, Sparkles, 
-  AlertTriangle, CheckCircle, File, Clock, ChevronRight, ChevronDown, Bot 
+  AlertTriangle, CheckCircle, File, Clock, ChevronRight, ChevronDown, Bot, MessageSquare 
 } from 'lucide-react';
 
 export const TenderAnalysis: React.FC = () => {
@@ -13,6 +13,9 @@ export const TenderAnalysis: React.FC = () => {
   const [documents, setDocuments] = useState<TenderDoc[]>([]);
   const [cribSheet, setCribSheet] = useState<CribSheet | null>(null);
   
+  // Mobile Tab State
+  const [mobileTab, setMobileTab] = useState<'docs' | 'chat' | 'crib'>('chat');
+
   // Chat State
   const [messages, setMessages] = useState<ChatMessage[]>([
     { 
@@ -31,7 +34,7 @@ export const TenderAnalysis: React.FC = () => {
   // Auto-scroll chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, mobileTab]);
 
   const handleProjectSelect = (projectId: string) => {
     const project = MOCK_PROJECTS.find(p => p.id === projectId) || null;
@@ -99,7 +102,7 @@ export const TenderAnalysis: React.FC = () => {
     <div className="h-[calc(100vh-100px)] flex flex-col space-y-4 animate-in fade-in duration-300">
       
       {/* Header */}
-      <div className="flex items-center justify-between shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-3">
         <div className="flex items-center gap-3">
             <div className="p-2 bg-[#7C6FF6]/10 rounded-xl">
                 <BrainCircuit className="w-6 h-6 text-[#7C6FF6]" />
@@ -109,7 +112,7 @@ export const TenderAnalysis: React.FC = () => {
                 <p className="text-sm text-gray-500">Commercial Intelligence & Risk Assessment</p>
             </div>
         </div>
-        <div className="w-64">
+        <div className="w-full md:w-64">
             <select 
                 className="w-full p-2 bg-white border border-gray-200 rounded-xl text-sm shadow-sm focus:outline-none focus:border-[#7C6FF6]"
                 onChange={(e) => handleProjectSelect(e.target.value)}
@@ -123,12 +126,39 @@ export const TenderAnalysis: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile Tab Bar (Hidden on Desktop) */}
+      {selectedProject && (
+        <div className="flex md:hidden bg-gray-100 p-1 rounded-lg border border-gray-200 shrink-0">
+            <button 
+                onClick={() => setMobileTab('docs')}
+                className={`flex-1 py-2 text-xs font-medium rounded-md flex items-center justify-center gap-1 transition-colors ${mobileTab === 'docs' ? 'bg-white text-[#7C6FF6] shadow-sm' : 'text-gray-500'}`}
+            >
+                <File className="w-3 h-3" /> Docs
+            </button>
+            <button 
+                onClick={() => setMobileTab('chat')}
+                className={`flex-1 py-2 text-xs font-medium rounded-md flex items-center justify-center gap-1 transition-colors ${mobileTab === 'chat' ? 'bg-white text-[#7C6FF6] shadow-sm' : 'text-gray-500'}`}
+            >
+                <MessageSquare className="w-3 h-3" /> Chat
+            </button>
+            <button 
+                onClick={() => setMobileTab('crib')}
+                className={`flex-1 py-2 text-xs font-medium rounded-md flex items-center justify-center gap-1 transition-colors ${mobileTab === 'crib' ? 'bg-white text-[#7C6FF6] shadow-sm' : 'text-gray-500'}`}
+            >
+                <FileText className="w-3 h-3" /> Crib Sheet
+            </button>
+        </div>
+      )}
+
       {/* Main Workspace */}
       {selectedProject ? (
-        <div className="flex-1 flex gap-4 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
             
             {/* LEFT PANEL: Documents */}
-            <div className="w-1/4 bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+            <div className={`
+                w-full md:w-1/4 bg-white rounded-2xl shadow-sm border border-gray-200 flex-col overflow-hidden
+                ${mobileTab === 'docs' ? 'flex' : 'hidden md:flex'}
+            `}>
                 <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 className="font-bold text-gray-800 text-sm">Project Documents</h3>
                     <button 
@@ -166,7 +196,10 @@ export const TenderAnalysis: React.FC = () => {
             </div>
 
             {/* CENTER PANEL: Chat */}
-            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col overflow-hidden relative">
+            <div className={`
+                w-full md:flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 flex-col overflow-hidden relative
+                ${mobileTab === 'chat' ? 'flex' : 'hidden md:flex'}
+            `}>
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-[#F6F8FB]/50">
                     {messages.map((msg) => (
@@ -196,9 +229,9 @@ export const TenderAnalysis: React.FC = () => {
                                     </div>
                                 </div>
                                 
-                                {msg.sources && (Array.isArray(msg.sources) && msg.sources.length > 0) && (
-                                    <div className="flex gap-2 pl-1">
-                                        {(msg.sources as string[]).map((source, i) => (
+                                {msg.sources && msg.sources.length > 0 && (
+                                    <div className="flex gap-2 pl-1 flex-wrap">
+                                        {msg.sources.map((source, i) => (
                                             <span key={i} className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full border border-gray-200 flex items-center gap-1">
                                                 <Paperclip className="w-3 h-3" /> {source}
                                             </span>
@@ -247,22 +280,26 @@ export const TenderAnalysis: React.FC = () => {
                             <Send className="w-4 h-4" />
                         </button>
                     </form>
-                    <div className="flex justify-center gap-4 mt-2">
-                        <button onClick={() => setInput("Analyze contract for delay risks")} className="text-[10px] text-gray-400 hover:text-[#7C6FF6] transition-colors">
-                            "Analyze contract for delay risks"
+                    {/* Suggestions - Scrollable on mobile */}
+                    <div className="flex gap-2 mt-2 overflow-x-auto pb-1 no-scrollbar">
+                        <button onClick={() => setInput("Check Project Location")} className="whitespace-nowrap text-[10px] px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100 text-gray-500 hover:text-[#7C6FF6] hover:border-[#7C6FF6]/30 transition-colors">
+                            Check Project Location
                         </button>
-                        <button onClick={() => setInput("Search client financial health")} className="text-[10px] text-gray-400 hover:text-[#7C6FF6] transition-colors">
-                            "Search client financial health"
+                        <button onClick={() => setInput("Search client financial health")} className="whitespace-nowrap text-[10px] px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100 text-gray-500 hover:text-[#7C6FF6] hover:border-[#7C6FF6]/30 transition-colors">
+                            Search client financial health
                         </button>
-                        <button onClick={() => setInput("Compare Spec vs Drawings for discrepancies")} className="text-[10px] text-gray-400 hover:text-[#7C6FF6] transition-colors">
-                            "Compare Spec vs Drawings"
+                        <button onClick={() => setInput("Compare Spec vs Drawings for discrepancies")} className="whitespace-nowrap text-[10px] px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100 text-gray-500 hover:text-[#7C6FF6] hover:border-[#7C6FF6]/30 transition-colors">
+                            Compare Spec vs Drawings
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* RIGHT PANEL: Crib Sheet */}
-            <div className="w-1/4 bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+            <div className={`
+                w-full md:w-1/4 bg-white rounded-2xl shadow-sm border border-gray-200 flex-col overflow-hidden
+                ${mobileTab === 'crib' ? 'flex' : 'hidden md:flex'}
+            `}>
                 <div className="p-4 border-b border-gray-100 bg-gray-50">
                     <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
                         <FileText className="w-4 h-4 text-[#00B5D8]" /> Project Crib Sheet
@@ -345,26 +382,26 @@ export const TenderAnalysis: React.FC = () => {
 
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl border border-gray-200 shadow-sm">
+        <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <div className="w-16 h-16 bg-[#7C6FF6]/10 rounded-2xl flex items-center justify-center mb-6">
                 <BrainCircuit className="w-8 h-8 text-[#7C6FF6]" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Tender AI</h2>
-            <p className="text-gray-500 max-w-md text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Welcome to Tender AI</h2>
+            <p className="text-gray-500 max-w-md text-center mb-8 text-sm">
                 Select a project from the dropdown above to start analyzing contracts, drawings, and specifications with our expert agent.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 w-64">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left w-full max-w-3xl">
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                     <Search className="w-5 h-5 text-[#00B5D8] mb-2" />
                     <h4 className="font-bold text-sm text-gray-900">Client Intel</h4>
                     <p className="text-xs text-gray-500 mt-1">Live credit checks & financial news.</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 w-64">
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                     <AlertTriangle className="w-5 h-5 text-orange-500 mb-2" />
                     <h4 className="font-bold text-sm text-gray-900">Risk Detection</h4>
                     <p className="text-xs text-gray-500 mt-1">Finds LADs, conflicts & scope gaps.</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 w-64">
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                     <FileText className="w-5 h-5 text-[#7C6FF6] mb-2" />
                     <h4 className="font-bold text-sm text-gray-900">Crib Sheets</h4>
                     <p className="text-xs text-gray-500 mt-1">Auto-generated project summaries.</p>
